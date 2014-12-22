@@ -18,7 +18,24 @@ func New(host, port, username, password, dbname string) (*MGOClient, error) {
         collection: nil,
     }
 
-    mongoAddr := fmt.Sprintf("mongodb://%v:%v@%v:%v/%v", username, password, host, port, dbname)
+    if host == "" {
+        return nil, fmt.Errorf("host addr not set")
+    }
+
+    var mongoAddr string
+    if username != "" && password != "" && port != "" && dbname != "" {
+        mongoAddr = fmt.Sprintf("mongodb://%v:%v@%v:%v/%v", username, password, host, port, dbname)
+    } else if username != "" && password != "" && port != "" {
+        mongoAddr = fmt.Sprintf("mongodb://%v:%v@%v:%v", username, password, host, port)
+    } else if username != "" && password != "" {
+        mongoAddr = fmt.Sprintf("mongodb://%v:%v@%v", username, password, host)
+    } else if port != "" && dbname != "" {
+        mongoAddr = fmt.Sprintf("mongodb://%v:%v/%v", host, port, dbname)
+    } else if port != "" {
+        mongoAddr = fmt.Sprintf("mongodb://v:%v", host, port)
+    } else {
+        mongoAddr = fmt.Sprintf("mongodb://v", host)
+    }
 
     // 连接数据库
     session, err := mgo.Dial(mongoAddr)
@@ -27,7 +44,10 @@ func New(host, port, username, password, dbname string) (*MGOClient, error) {
     }
 
     mgoClient.session = session
-    mgoClient.database = session.DB(dbname)
+
+    if dbname != "" {
+        mgoClient.database = session.DB(dbname)
+    }
 
     return mgoClient, nil
 }
@@ -36,16 +56,35 @@ func (this *MGOClient) Close() {
     this.session.Close()
 }
 
-func (this *MGOClient) UseCollection(collection_name string) {
-    this.collection = this.database.C(collection_name)
+//if the dbname is empty, the "test" database is selected.
+func (this *MGOClient) UseDB(dbname string) error {
+    if this.session == nil {
+        return fmt.Errorf("invalid session object")
+    }
+
+    this.database = this.session.DB(dbname)
+    return nil
 }
 
-func (this *MGOClient) Insert(docs ...interface{}) error {
+func (this *MGOClient) UseCollection(collection_name string) error {
+    if this.database == nil {
+        fmt.Errorf("invalid database object")
+    }
+
+    this.collection = this.database.C(collection_name)
+    return nil
+}
+
+func (this *MGOClient) GetCurrentCollection() *mgo.Collection {
+    return this.collection
+}
+
+func (this *MGOClient) Insert(doc interface{}) error {
     if this.collection == nil {
         return fmt.Errorf("invalid collections object")
     }
 
-    return this.collection.Insert(docs)
+    return this.collection.Insert(doc)
 }
 
 func (this *MGOClient) Remove(selector interface{}) error {
