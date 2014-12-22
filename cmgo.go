@@ -34,7 +34,11 @@ func New(host, port, username, password, dbname string) (*MGOClient, error) {
     } else if port != "" {
         mongoAddr = fmt.Sprintf("mongodb://v:%v", host, port)
     } else {
-        mongoAddr = fmt.Sprintf("mongodb://v", host)
+        if host == "127.0.0.1" || host == "localhost" {
+            mongoAddr = host
+        } else {
+            mongoAddr = fmt.Sprintf("mongodb://v", host)
+        }
     }
 
     // 连接数据库
