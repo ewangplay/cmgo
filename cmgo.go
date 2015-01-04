@@ -56,6 +56,18 @@ func New(host, port, username, password, dbname string) (*MGOClient, error) {
     return mgoClient, nil
 }
 
+func (this *MGOClient) Copy() *MGOClient {
+    mgoClient := &MGOClient{
+        session: nil,
+        database: nil,
+        collection: nil,
+    }
+
+    mgoClient.session = this.session.Copy()
+
+    return mgoClient
+}
+
 func (this *MGOClient) Close() {
     this.session.Close()
 }
